@@ -47,6 +47,7 @@ class Settings(BaseSettings):
     # prob < PARTIAL                → "unsupported"
     ENTAILMENT_VERIFIED_THRESHOLD: float = 0.60
     ENTAILMENT_PARTIAL_THRESHOLD: float = 0.30
+    PROBLEM_GAP_SIMILARITY_THRESHOLD: float = 0.85
 
     # ── Recommendation engine (local corpus) ─────────────────────────────────
     RECOMMENDATION_TOP_K: int = 5

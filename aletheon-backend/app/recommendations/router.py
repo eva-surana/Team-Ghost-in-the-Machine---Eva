@@ -46,6 +46,15 @@ _DISABLED_RESPONSE: dict[str, Any] = {
 
 def _build_unavailable(reason: str, cached_results: list | None = None,
                         fetched_at: str | None = None) -> dict:
+    cache_age_hours = None
+    if fetched_at:
+        try:
+            fetched_dt = datetime.fromisoformat(fetched_at)
+            now_dt = datetime.now(timezone.utc)
+            cache_age_hours = round(max(0.0, (now_dt - fetched_dt).total_seconds() / 3600.0), 1)
+        except Exception:
+            pass
+
     return {
         "available": False,
         "reason": reason,
@@ -53,6 +62,7 @@ def _build_unavailable(reason: str, cached_results: list | None = None,
         "checked_at": datetime.now(timezone.utc).isoformat(),
         "recommendations": cached_results or [],
         "cache_fetched_at": fetched_at,
+        "cache_age_hours": cache_age_hours,
     }
 
 
@@ -72,12 +82,21 @@ async def _get_recommendations(doc_id: str, force_refresh: bool = False) -> dict
     cached_results, fetched_at = reco_cache.get_cached(doc_id)
 
     if cached_results and not force_refresh and reco_cache.is_cache_fresh(fetched_at):
+        cache_age_hours = None
+        if fetched_at:
+            try:
+                fetched_dt = datetime.fromisoformat(fetched_at)
+                now_dt = datetime.now(timezone.utc)
+                cache_age_hours = round(max(0.0, (now_dt - fetched_dt).total_seconds() / 3600.0), 1)
+            except Exception:
+                pass
         return {
             "available": True,
             "source_mode": "cached",
             "checked_at": datetime.now(timezone.utc).isoformat(),
             "recommendations": cached_results,
             "cache_fetched_at": fetched_at,
+            "cache_age_hours": cache_age_hours,
         }
 
     # ── Connectivity check ───────────────────────────────────────────────────

@@ -36,10 +36,10 @@ logger = logging.getLogger(__name__)
 
 # ── Task → retrieval query templates ─────────────────────────────────────────
 _TASK_QUERIES = {
-    "problem": "problem challenge motivation why this matters",
-    "gap": "gap limitation prior work missing what is not solved",
-    "method": "proposed method approach model architecture technique",
-    "contribution": "contribution novelty result finding improvement over baseline",
+    "problem": "broad problem motivation challenge domain need real-world importance application",
+    "gap": "specific limitation prior work missing unsolved bottleneck drawback weakness existing methods lack",
+    "method": "proposed method approach algorithm model architecture design technique mechanism",
+    "contribution": "contribution novelty result empirical finding performance key improvement state-of-the-art",
 }
 
 
@@ -49,6 +49,7 @@ async def extract_field(
     query_override: Optional[str] = None,
     top_k_retrieve: int = 10,
     composite_threshold: int = 2,
+    exclude_spans: Optional[List[SourceSpan]] = None,
 ) -> Optional[GroundedClaim]:
     """
     Extract a single grounded claim for the given task field.
@@ -57,9 +58,16 @@ async def extract_field(
     query = query_override or _TASK_QUERIES.get(task, task)
 
     # Step 1 & 2: Retrieve + section-weighted re-rank
-    results = sparse_retriever.search(doc_id=doc_id, query=query, top_k=top_k_retrieve)
+    results = sparse_retriever.search(doc_id=doc_id, query=query, top_k=top_k_retrieve * 2)
+    if exclude_spans:
+        ex_ids = {s.source_id for s in exclude_spans}
+        results = [r for r in results if r.span.source_id not in ex_ids]
+
     if not results:
         all_spans = job_manager.get_all_spans(doc_id)
+        if exclude_spans:
+            ex_ids = {s.source_id for s in exclude_spans}
+            all_spans = [s for s in all_spans if s.source_id not in ex_ids]
         if not all_spans:
             return None
         results = [SearchResult(span=s, score=0.1) for s in all_spans[:top_k_retrieve]]
@@ -92,14 +100,21 @@ async def extract_field(
 async def generate_grounded_qa(doc_id: str, question: str) -> QAResponse:
     """
     Extractive Q&A: retrieve top-k spans most relevant to the question,
-    return each as a separate GroundedClaim (single_span mode for Q&A).
+    return verified/partially_supported spans as GroundedClaims.
+    Stage-by-stage logging instrumented per diagnostic spec.
     """
     results = sparse_retriever.search(doc_id=doc_id, query=question, top_k=settings.RETRIEVAL_TOP_K)
+    scores = [round(r.score, 4) for r in results]
+    logger.info(f"[QA Diagnostic] Stage 1 (Retrieval): retrieved {len(results)} chunks for doc {doc_id}. Similarity scores: {scores}")
+
     if not results:
         all_spans = job_manager.get_all_spans(doc_id)
         results = [SearchResult(span=s, score=0.1) for s in all_spans[:settings.RETRIEVAL_TOP_K]]
+        logger.info(f"[QA Diagnostic] Stage 1 Fallback: retrieved {len(results)} fallback spans from doc {doc_id}")
 
     ranked = rank_spans(results, task="qa", top_k=settings.RETRIEVAL_TOP_K)
+    logger.info(f"[QA Diagnostic] Stage 2 (Ranker): {len(ranked)} candidate spans entering verifier")
+
     claims: List[GroundedClaim] = []
 
     for r, boosted_score in ranked:
@@ -110,16 +125,30 @@ async def generate_grounded_qa(doc_id: str, question: str) -> QAResponse:
             cited_spans=[span],
         )
         confidence = calculate_claim_confidence(r.score, ent_score, verdict)
-        claims.append(GroundedClaim(
-            claim_id=str(uuid.uuid4()),
-            text=span.text,
-            cited_spans=[span],
-            composition_method="single_span",
-            verification_status=verdict,
-            confidence=confidence,
-            retrieval_score=round(r.score, 4),
-            entailment_score=round(ent_score, 4),
-            verifier_features=features,
-        ))
+        logger.info(f"[QA Diagnostic] Stage 3 (Verifier): span='{span.text[:40]}...' verdict={verdict} ent_score={ent_score:.4f} conf={confidence:.4f}")
 
-    return QAResponse(document_id=doc_id, question=question, answer_spans=claims)
+        if verdict in ("verified", "partially_supported"):
+            claims.append(GroundedClaim(
+                claim_id=str(uuid.uuid4()),
+                text=span.text,
+                cited_spans=[span],
+                composition_method="single_span",
+                verification_status=verdict,
+                confidence=confidence,
+                retrieval_score=round(r.score, 4),
+                entailment_score=round(ent_score, 4),
+                verifier_features=features,
+            ))
+
+    logger.info(f"[QA Diagnostic] Stage 4 (Summary): {len(claims)} / {len(ranked)} claims survived verification")
+
+    reason = None
+    if not claims:
+        reason = "no_verified_claims_found"
+
+    return QAResponse(
+        document_id=doc_id,
+        question=question,
+        answer_spans=claims,
+        reason=reason,
+    )

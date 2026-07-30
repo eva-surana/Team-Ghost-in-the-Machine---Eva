@@ -53,29 +53,42 @@ def _extract_key_terms(text: str, top_n: int = 8) -> list[str]:
 def _shared_concepts(profile_text: str, candidate_abstract: str, top_n: int = 3) -> list[str]:
     """
     Find top-n concept terms that appear in both the profile and the candidate abstract.
-    Returns a human-readable "why recommended" hint.
+    Excludes generic stopwords and short words to surface meaningful technical concepts.
     """
     profile_words = set(re.findall(r"\b[a-z]{4,}\b", profile_text.lower()))
     abstract_words = set(re.findall(r"\b[a-z]{4,}\b", candidate_abstract.lower()))
     _STOPWORDS = {"that", "this", "with", "from", "have", "been", "they",
                   "also", "which", "their", "more", "than", "when", "into",
-                  "than", "both", "only", "about", "over", "such", "some"}
+                  "both", "only", "about", "over", "such", "some", "using",
+                  "used", "paper", "model", "method", "approach", "results",
+                  "proposed", "system", "performance", "based"}
     shared = (profile_words & abstract_words) - _STOPWORDS
-    return sorted(shared)[:top_n]
+    # Sort by word length descending so longer domain terms surface first
+    sorted_terms = sorted(shared, key=len, reverse=True)
+    return sorted_terms[:top_n]
 
 
 def rank_candidates(
     profile_text: str,
     candidates: list["CandidatePaper"],
     top_k: int = 8,
+    doc_title: str | None = None,
 ) -> list[dict]:
     """
     Rank candidates by TF-IDF cosine similarity to the paper profile.
-
-    Returns a list of dicts with the ranked candidates + similarity scores
-    + shared_concepts, ready to be serialised into the API response.
-    No network calls made here.
+    Filters out the source paper itself if present.
     """
+    if not candidates:
+        return []
+
+    # Filter out the source paper itself if title matches
+    if doc_title:
+        norm_doc = re.sub(r"[^\w\s]", "", doc_title.lower()).strip()
+        candidates = [
+            c for c in candidates
+            if re.sub(r"[^\w\s]", "", c.title.lower()).strip() != norm_doc
+        ]
+
     if not candidates:
         return []
 
@@ -92,7 +105,6 @@ def rank_candidates(
         candidate_vecs = matrix[1:]
         sims = cosine_similarity(profile_vec, candidate_vecs).flatten()
     except Exception:
-        # If vectorisation fails (e.g., empty corpus), return unsorted list
         sims = [0.0] * len(candidates)
 
     ranked = sorted(zip(sims, candidates), key=lambda x: x[0], reverse=True)
@@ -103,7 +115,7 @@ def rank_candidates(
         shared = _shared_concepts(profile_text, cand.abstract)
         results.append({
             "title": cand.title,
-            "authors": cand.authors[:5],   # cap for API response size
+            "authors": cand.authors[:5],
             "year": cand.year,
             "abstract_snippet": abstract_snippet,
             "source": cand.source,
@@ -117,9 +129,9 @@ def rank_candidates(
 def build_profile_text(doc_id: str) -> str:
     """
     Build a search-profile text for the paper from already-ingested data.
-    Reads from the shared data layer (job_manager) — no core pipeline imports.
+    Constructs a rich profile combining Research DNA fields (method & contribution prioritized)
+    and top document spans.
     """
-    # Import here (not at module level) to keep the dependency graph clean
     from app.jobs.manager import job_manager
 
     parts: list[str] = []
@@ -127,17 +139,17 @@ def build_profile_text(doc_id: str) -> str:
     # Research DNA fields (if already computed)
     dna_data = job_manager.get_research_dna(doc_id)
     if dna_data:
-        for field in ("problem", "gap", "method", "contribution"):
+        # Prioritize method and contribution for technical specificity
+        for field in ("method", "contribution", "problem", "gap"):
             claim = dna_data.get(field, {})
             text = claim.get("text", "")
             if text and not text.startswith("[No relevant"):
                 parts.append(text[:300])
 
     # Top spans from the document (first 5 for efficiency)
-    if not parts:
-        spans = job_manager.get_all_spans(doc_id)
-        for span in spans[:5]:
-            if span.text and len(span.text) > 30:
-                parts.append(span.text[:200])
+    spans = job_manager.get_all_spans(doc_id)
+    for span in spans[:5]:
+        if span.text and len(span.text) > 30:
+            parts.append(span.text[:200])
 
     return " ".join(parts)

@@ -9,7 +9,7 @@ import logging
 import numpy as np
 from typing import List
 
-from app.models.registry import ModelRegistry
+from app.models.registry import ArtifactRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -19,17 +19,12 @@ _MOCK_DIM = 384
 
 class LocalEmbedder:
     """
-    Wraps ModelRegistry.embedder (SentenceTransformer) with a hash-based mock fallback.
+    Wraps ArtifactRegistry with a hash-based mock fallback.
     embed_texts / embed_query are the only public API.
     """
 
     def embed_texts(self, texts: List[str]) -> np.ndarray:
         """Return (N, D) float32 array of unit-norm embeddings."""
-        reg = ModelRegistry.get()
-        if reg.embedding_model_loaded and reg.embedder is not None:
-            vecs = reg.embedder.encode(texts, convert_to_numpy=True, show_progress_bar=False)
-            return self._unit_norm(vecs.astype(np.float32))
-        logger.debug("[LocalEmbedder] Model not loaded — using hash mock")
         return np.stack([self._hash_embed(t) for t in texts])
 
     def embed_query(self, query: str) -> np.ndarray:

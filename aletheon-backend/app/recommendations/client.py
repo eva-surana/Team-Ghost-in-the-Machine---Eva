@@ -126,16 +126,29 @@ def fetch_arxiv(query: str, max_results: int = 10) -> list[CandidatePaper]:
 def fetch_candidates(query: str, ss_limit: int = 15, arxiv_limit: int = 10) -> list[CandidatePaper]:
     """
     Fetch candidates from both Semantic Scholar and arXiv.
-    Rate-safe: sequential with a small delay.
+    Each API call is strictly isolated so an API failure in one does not block the other.
     """
-    candidates = fetch_semantic_scholar(query, limit=ss_limit)
-    time.sleep(0.5)   # be a good citizen
-    candidates += fetch_arxiv(query, max_results=arxiv_limit)
-    # Deduplicate by title (case-insensitive)
+    candidates = []
+
+    try:
+        ss_papers = fetch_semantic_scholar(query, limit=ss_limit)
+        candidates.extend(ss_papers)
+    except Exception as exc:
+        logger.warning(f"[SS Client] Fetch error: {exc}")
+
+    try:
+        time.sleep(0.5)   # rate-limit courtesy
+        arxiv_papers = fetch_arxiv(query, max_results=arxiv_limit)
+        candidates.extend(arxiv_papers)
+    except Exception as exc:
+        logger.warning(f"[arXiv Client] Fetch error: {exc}")
+
+    # Deduplicate across sources using normalized fuzzy title matching
+    import re
     seen, unique = set(), []
     for p in candidates:
-        key = p.title.lower().strip()
-        if key and key not in seen:
-            seen.add(key)
+        norm_title = re.sub(r"[^\w\s]", "", p.title.lower()).strip()
+        if norm_title and norm_title not in seen:
+            seen.add(norm_title)
             unique.append(p)
     return unique

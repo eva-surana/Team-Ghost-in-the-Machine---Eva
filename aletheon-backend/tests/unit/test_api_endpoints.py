@@ -96,15 +96,27 @@ def test_fidelity_report():
 
 
 def test_qa_returns_verified_claims():
-    doc_id = _setup_completed_doc()
+    doc_id = _setup_completed_doc("Aletheon is an evidence-first research platform with verified citations.")
     r = client.post(f"/documents/{doc_id}/ask", json={"question": "What is Aletheon?"})
     assert r.status_code == 200
     data = r.json()
     assert "answer_spans" in data
     assert len(data["answer_spans"]) > 0
     for claim in data["answer_spans"]:
-        assert claim["verification_status"] in {"verified", "partially_supported", "unsupported"}
+        assert claim["verification_status"] in {"verified", "partially_supported"}
         assert claim["composition_method"] in {"single_span", "extractive_composite"}
+        assert len(claim["cited_spans"]) > 0
+
+
+def test_qa_returns_explicit_reason_when_unanswered():
+    doc_id = job_manager.create_document_job()
+    job_manager.update_status(doc_id, status="completed", pages_count=1, chunks_count=0)
+    r = client.post(f"/documents/{doc_id}/ask", json={"question": "What is quantum error correction?"})
+    assert r.status_code == 200
+    data = r.json()
+    assert "answer_spans" in data
+    assert len(data["answer_spans"]) == 0
+    assert data["reason"] == "no_verified_claims_found"
 
 
 def test_recommendations_similar_papers():

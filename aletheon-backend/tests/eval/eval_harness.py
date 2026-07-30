@@ -191,5 +191,47 @@ async def test_grounding_eval_harness():
     assert results["avg_latency_ms"] < 5_000, f"Latency too high: {results['avg_latency_ms']:.0f}ms"
 
 
+@pytest.mark.asyncio
+async def test_research_dna_problem_gap_differentiation_eval():
+    """Permanent eval case asserting problem vs gap cosine similarity stays below threshold."""
+    from app.jobs.manager import job_manager
+    from app.vectorization.tfidf_service import tfidf_service
+    from app.extraction.research_dna import extract_research_dna
+    from app.embeddings.local_embedder import local_embedder
+    from sklearn.metrics.pairwise import cosine_similarity
+
+    doc_id = job_manager.create_document_job()
+    spans = [
+        SourceSpan(
+            source_id=f"{doc_id}_s1", document_id=doc_id, page=1, section="Abstract",
+            text="Natural language processing models suffer from memory bloat in production."
+        ),
+        SourceSpan(
+            source_id=f"{doc_id}_s2", document_id=doc_id, page=1, section="Related Work",
+            text="However, current quantization techniques lose up to 15% accuracy on complex reasoning tasks."
+        ),
+        SourceSpan(
+            source_id=f"{doc_id}_s3", document_id=doc_id, page=1, section="Method",
+            text="We propose adaptive sparse matrix decomposition for low-bit model compression."
+        ),
+        SourceSpan(
+            source_id=f"{doc_id}_s4", document_id=doc_id, page=1, section="Conclusion",
+            text="Our method achieves 4x compression with under 1% accuracy loss."
+        ),
+    ]
+    job_manager.store_spans(doc_id, spans)
+    tfidf_service.fit_and_store(doc_id, spans)
+    job_manager.update_status(doc_id, status="completed", pages_count=1, chunks_count=4)
+
+    dna = await extract_research_dna(doc_id)
+    assert dna.problem is not None
+    assert dna.gap is not None
+    assert dna.extraction_quality == "high"
+
+    vecs = local_embedder.embed_texts([dna.problem.text, dna.gap.text])
+    sim = float(cosine_similarity(vecs[0:1], vecs[1:2])[0, 0])
+    assert sim <= 0.85, f"Problem vs gap similarity too high: {sim:.4f} > 0.85"
+
+
 if __name__ == "__main__":
     asyncio.run(_run_eval())
