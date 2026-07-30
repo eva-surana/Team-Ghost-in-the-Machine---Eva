@@ -125,6 +125,32 @@ class JobManager:
             error=row["error"],
         )
 
+    def get_recent_documents(self) -> list[dict]:
+        with _conn() as con:
+            rows = con.execute(
+                "SELECT doc_id, status FROM jobs ORDER BY created_at DESC LIMIT 10"
+            ).fetchall()
+        
+        results = []
+        for row in rows:
+            doc_id = row["doc_id"]
+            filename = self.get_artifact(doc_id, "filename") or "Untitled Document"
+            records = self.get_verification_records(doc_id)
+            if not records:
+                fidelity = 100
+            else:
+                n_total = len(records)
+                n_verified = sum(1 for r in records if r["verdict"] == "verified")
+                n_partial = sum(1 for r in records if r["verdict"] == "partially_supported")
+                fidelity = round(((n_verified + 0.5 * n_partial) / n_total) * 100)
+            
+            results.append({
+                "documentId": doc_id,
+                "name": filename,
+                "fidelity": fidelity
+            })
+        return results
+
     # ── Source span storage ───────────────────────────────────────────────────
 
     def store_spans(self, doc_id: str, spans: list[SourceSpan]) -> None:

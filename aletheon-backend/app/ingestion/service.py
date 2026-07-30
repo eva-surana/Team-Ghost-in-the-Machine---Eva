@@ -21,7 +21,19 @@ async def process_document_background(doc_id: str, pdf_bytes: bytes, filename: s
       5. Update job status
     """
     try:
+        import asyncio
+        await asyncio.sleep(2) # Added artificial loading time as requested
+
         logger.info(f"[Ingestion] Starting pipeline for doc={doc_id} file={filename}")
+        job_manager.store_artifact(doc_id, "filename", filename)
+
+        # Save PDF to disk for viewing in the frontend
+        from app.config import settings
+        from pathlib import Path
+        uploads_dir = Path(settings.SQLITE_DB_PATH).parent / "uploads"
+        uploads_dir.mkdir(parents=True, exist_ok=True)
+        pdf_path = uploads_dir / f"{doc_id}.pdf"
+        pdf_path.write_bytes(pdf_bytes)
 
         blocks = parse_pdf_bytes(pdf_bytes)
         spans = segment_blocks(doc_id, blocks)

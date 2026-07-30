@@ -71,6 +71,10 @@ async def health_check():
 
 # ── Document Ingestion ────────────────────────────────────────────────────────
 
+@router.get("/documents", tags=["Documents"])
+async def list_documents():
+    return job_manager.get_recent_documents()
+
 @router.post("/documents", response_model=DocumentUploadResponse, status_code=202, tags=["Documents"])
 async def upload_document(
     background_tasks: BackgroundTasks,
@@ -99,6 +103,17 @@ async def get_status(doc_id: str):
     if not status:
         raise HTTPException(status_code=404, detail=f"Document '{doc_id}' not found.")
     return status
+
+@router.get("/documents/{doc_id}/file", tags=["Documents"])
+async def get_document_file(doc_id: str):
+    _assert_exists(doc_id)
+    from pathlib import Path
+    from app.config import settings
+    from fastapi.responses import FileResponse
+    pdf_path = Path(settings.SQLITE_DB_PATH).parent / "uploads" / f"{doc_id}.pdf"
+    if not pdf_path.exists():
+        raise HTTPException(status_code=404, detail="PDF file not found on server.")
+    return FileResponse(pdf_path, media_type="application/pdf")
 
 
 # ── Evidence Lookup ───────────────────────────────────────────────────────────
