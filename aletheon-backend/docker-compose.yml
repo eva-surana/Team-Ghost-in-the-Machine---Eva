@@ -1,0 +1,42 @@
+# Aletheon Backend — Docker Compose
+# Matches the actual offline architecture: single service, local volumes only.
+# No external services (Qdrant, Postgres, Neo4j are NOT used by this build).
+
+services:
+  aletheon:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: aletheon-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      # Override any .env values for container context
+      SQLITE_DB_PATH: /app/data/aletheon.db
+      SPARSE_VECTORS_DIR: /app/data/sparse_vectors
+      DOC_VECTORIZERS_DIR: /app/data/doc_vectorizers
+      ENTAILMENT_CLASSIFIER_PATH: /app/models/entailment_classifier.pkl
+      CORPUS_INDEX_PATH: /app/models/corpus_index.pkl
+      TESSERACT_DATA_PATH: /app/models/tessdata
+      CORPUS_TEXT_DIR: /app/corpus
+      ENVIRONMENT: production
+      LOG_FORMAT: json
+    volumes:
+      # Persistent state — survives container rebuild
+      - ./data:/app/data
+      - ./models:/app/models
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      start_period: 20s
+      retries: 3
+    # Resource limits — single-process CPU-only backend
+    deploy:
+      resources:
+        limits:
+          memory: 2G

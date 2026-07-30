@@ -1,0 +1,52 @@
+[
+  {
+    "paper_id": "vaswani2017attention",
+    "title": "Attention Is All You Need",
+    "abstract": "We propose the Transformer, a model architecture relying entirely on attention mechanisms, dispensing with recurrence and convolutions entirely. Experiments on two machine translation tasks show these models to be superior in quality while being more parallelizable and requiring significantly less time to train. The Transformer achieves 28.4 BLEU on the WMT 2014 English-to-German translation task, outperforming existing best results including ensembles."
+  },
+  {
+    "paper_id": "devlin2019bert",
+    "title": "BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding",
+    "abstract": "We introduce a new language representation model called BERT, which stands for Bidirectional Encoder Representations from Transformers. Unlike recent language representation models, BERT is designed to pre-train deep bidirectional representations from unlabeled text by jointly conditioning on both left and right context in all layers. BERT obtains new state-of-the-art results on eleven natural language processing tasks, including pushing the GLUE score to 80.5%, MultiNLI accuracy to 86.7%, SQuAD v1.1 question answering Test F1 to 93.2 and SQuAD v2.0 Test F1 to 83.1."
+  },
+  {
+    "paper_id": "karpukhin2020dpr",
+    "title": "Dense Passage Retrieval for Open-Domain Question Answering",
+    "abstract": "Open-domain question answering relies on efficient passage retrieval to select candidate contexts, where traditional sparse vector space models such as TF-IDF or BM25 are the standard choice. In this work, we show that retrieval can be practically implemented using dense representations alone, where embeddings are learned by a simple dual-encoder framework. When trained on question and passage pairs, our dense retrieval outperforms a strong Lucene-BM25 system greatly by 9%-19% absolute in terms of top-20 passage retrieval accuracy."
+  },
+  {
+    "paper_id": "brown2020gpt3",
+    "title": "Language Models are Few-Shot Learners",
+    "abstract": "We demonstrate that scaling up language models greatly improves task-agnostic, few-shot performance, sometimes even reaching competitiveness with prior state-of-the-art fine-tuning approaches. GPT-3 with 175 billion parameters achieves strong performance on many NLP datasets without any gradient updates or fine-tuning, with tasks specified purely via text interaction. We also identify some datasets where GPT-3's few-shot learning still struggles, and discuss broader societal impacts of this work."
+  },
+  {
+    "paper_id": "robertson2009bm25",
+    "title": "The Probabilistic Relevance Framework: BM25 and Beyond",
+    "abstract": "BM25 is a bag-of-words retrieval function that ranks a set of documents based on the query terms appearing in each document, regardless of the inter-relationship between the query terms within a document. It is based on the probabilistic retrieval framework developed in the 1970s and 1980s. BM25 and its newer variants represent a highly effective class of algorithms for information retrieval, outperforming many dense retrieval methods on sparse query tasks."
+  },
+  {
+    "paper_id": "lewis2020rag",
+    "title": "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks",
+    "abstract": "Large pre-trained language models store factual knowledge in their parameters, but their ability to access and precisely manipulate knowledge is still limited. We explore a general-purpose fine-tuning recipe for retrieval-augmented generation (RAG), combining parametric and non-parametric memory for language generation. A sequence-to-sequence model is combined with a dense retriever to retrieve documents from Wikipedia. RAG models outperform state-of-the-art parametric-only seq2seq models on knowledge-intensive tasks."
+  },
+  {
+    "paper_id": "li2020survey_transformers",
+    "title": "A Survey on Transformer Models in Natural Language Processing",
+    "abstract": "The Transformer model has become the dominant architecture in natural language processing, replacing recurrent neural networks in a wide range of tasks. This survey provides a comprehensive overview of transformer-based models including BERT, GPT, T5, and their variants. We discuss pre-training objectives, fine-tuning strategies, efficient attention mechanisms, and the application of transformers to tasks such as machine translation, question answering, text summarization, and information retrieval."
+  },
+  {
+    "paper_id": "yang2019xlnet",
+    "title": "XLNet: Generalized Autoregressive Pretraining for Language Understanding",
+    "abstract": "With the capability of modeling bidirectional contexts, denoising autoencoding based pretraining like BERT achieves better performance than pretraining approaches based on autoregressive language modeling. However, relying on corrupting the input with masks, BERT neglects dependency between the masked positions and suffers from a pretrain-finetune discrepancy. In light of these pros and cons, we propose XLNet, a generalized autoregressive pretraining method that enables learning bidirectional contexts by maximizing the expected likelihood over all permutations of the factorization order."
+  },
+  {
+    "paper_id": "manning2008introduction_ir",
+    "title": "Introduction to Information Retrieval",
+    "abstract": "This textbook covers the essential topics of information retrieval, including indexing, query processing, evaluation, and ranking. Topics include the vector space model, TF-IDF weighting, BM25, boolean retrieval, probabilistic models, language models, and evaluation metrics such as precision, recall, and mean average precision. The book is suitable for students and practitioners interested in understanding the foundations of search engines and document retrieval systems."
+  },
+  {
+    "paper_id": "ouyang2022instructgpt",
+    "title": "Training language models to follow instructions with human feedback",
+    "abstract": "Making language models bigger does not inherently make them better at following a user's intent. Language models can generate outputs that are untruthful, toxic, or simply not helpful to the user. We show that it is possible to significantly reduce these problems using fine-tuning from human feedback. Starting from GPT-3, we use reinforcement learning from human feedback (RLHF) to train InstructGPT models. InstructGPT models are better at following instructions and are preferred by human labelers over GPT-3 outputs, despite having 100x fewer parameters."
+  }
+]
