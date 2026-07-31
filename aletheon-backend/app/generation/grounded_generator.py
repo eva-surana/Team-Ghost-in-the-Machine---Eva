@@ -19,12 +19,13 @@ Q&A pipeline:
 """
 from __future__ import annotations
 
+import json
 import logging
 import uuid
-from typing import List, Optional
+from typing import AsyncGenerator, List, Optional
 
 from app.config import settings
-from app.generation.extractor import compose_claim
+from app.generation.extractor import compose_claim, extract_precise_answer_sentence
 from app.generation.span_selector import rank_spans
 from app.jobs.manager import job_manager
 from app.models.schemas import GroundedClaim, QAResponse, SourceSpan
@@ -119,18 +120,19 @@ async def generate_grounded_qa(doc_id: str, question: str) -> QAResponse:
 
     for r, boosted_score in ranked:
         span = r.span
+        precise_text = extract_precise_answer_sentence(question, span.text)
         verdict, ent_score, features = verifier_engine.verify(
             doc_id=doc_id,
-            claim_text=span.text,
+            claim_text=precise_text,
             cited_spans=[span],
         )
         confidence = calculate_claim_confidence(r.score, ent_score, verdict)
-        logger.info(f"[QA Diagnostic] Stage 3 (Verifier): span='{span.text[:40]}...' verdict={verdict} ent_score={ent_score:.4f} conf={confidence:.4f}")
+        logger.info(f"[QA Diagnostic] Stage 3 (Verifier): span='{precise_text[:40]}...' verdict={verdict} ent_score={ent_score:.4f} conf={confidence:.4f}")
 
         if verdict in ("verified", "partially_supported"):
             claims.append(GroundedClaim(
                 claim_id=str(uuid.uuid4()),
-                text=span.text,
+                text=precise_text,
                 cited_spans=[span],
                 composition_method="single_span",
                 verification_status=verdict,
@@ -152,3 +154,51 @@ async def generate_grounded_qa(doc_id: str, question: str) -> QAResponse:
         answer_spans=claims,
         reason=reason,
     )
+
+
+async def generate_grounded_qa_stream(doc_id: str, question: str) -> AsyncGenerator[str, None]:
+    """
+    Generator yielding SSE formatted event strings for real-time Q&A streaming.
+    Yields:
+      event: status\ndata: {"stage": "searching"}\n\n
+      event: claim\ndata: {...}\n\n
+      event: end\ndata: {"reason": null}\n\n
+    """
+    results = sparse_retriever.search(doc_id=doc_id, query=question, top_k=settings.RETRIEVAL_TOP_K)
+    if not results:
+        all_spans = job_manager.get_all_spans(doc_id)
+        results = [SearchResult(span=s, score=0.1) for s in all_spans[:settings.RETRIEVAL_TOP_K]]
+
+    ranked = rank_spans(results, task="qa", top_k=settings.RETRIEVAL_TOP_K)
+
+    yield f"event: status\ndata: {json.dumps({'stage': 'verifying', 'total': len(ranked)})}\n\n"
+
+    found_count = 0
+    for r, boosted_score in ranked:
+        span = r.span
+        precise_text = extract_precise_answer_sentence(question, span.text)
+        verdict, ent_score, features = verifier_engine.verify(
+            doc_id=doc_id,
+            claim_text=precise_text,
+            cited_spans=[span],
+        )
+        confidence = calculate_claim_confidence(r.score, ent_score, verdict)
+
+        if verdict in ("verified", "partially_supported"):
+            found_count += 1
+            claim = GroundedClaim(
+                claim_id=str(uuid.uuid4()),
+                text=precise_text,
+                cited_spans=[span],
+                composition_method="single_span",
+                verification_status=verdict,
+                confidence=confidence,
+                retrieval_score=round(r.score, 4),
+                entailment_score=round(ent_score, 4),
+                verifier_features=features,
+            )
+            yield f"event: claim\ndata: {claim.model_dump_json()}\n\n"
+
+    reason = "no_verified_claims_found" if found_count == 0 else None
+    yield f"event: end\ndata: {json.dumps({'reason': reason})}\n\n"
+

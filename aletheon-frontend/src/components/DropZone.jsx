@@ -2,7 +2,7 @@
 import { useRef, useState } from 'react'
 import { useDispatch } from 'react-redux'
 import { useRouter } from 'next/navigation'
-import { UploadCloud, Loader2 } from 'lucide-react'
+import { UploadCloud, Loader2, FileText } from 'lucide-react'
 import { uploadDocument } from '../lib/api'
 import { documentUploaded } from '../store/documentSlice'
 
@@ -41,10 +41,10 @@ export default function DropZone() {
       }}
       onClick={() => !uploading && inputRef.current?.click()}
       className={`
-        relative overflow-hidden border-[3px] border-dashed rounded-3xl p-16 text-center cursor-pointer transition-all duration-500 ease-out
+        relative border border-dashed rounded-xl p-10 sm:p-14 text-center cursor-pointer transition-all duration-200
         ${dragging 
-          ? 'border-indigo-500 bg-indigo-50/30 scale-[1.02] shadow-[0_0_40px_-10px_rgba(99,102,241,0.3)]' 
-          : 'border-slate-200 bg-white/50 hover:bg-white/80 hover:border-indigo-300 hover:shadow-lg'}
+          ? 'border-indigo-500 bg-indigo-500/5' 
+          : 'border-slate-800 bg-slate-950/40 hover:bg-slate-950/80 hover:border-slate-700'}
         ${uploading ? 'cursor-not-allowed opacity-75' : ''}
       `}
     >
@@ -56,28 +56,29 @@ export default function DropZone() {
         onChange={(e) => handleFile(e.target.files?.[0])}
       />
       
-      <div className="flex flex-col items-center justify-center space-y-6">
-        <div className={`
-          relative p-5 rounded-full transition-all duration-500
-          ${dragging ? 'bg-indigo-100 text-indigo-600 scale-110' : 'bg-slate-50 text-slate-400'}
-        `}>
-          {dragging && (
-            <div className="absolute inset-0 rounded-full animate-ping bg-indigo-200 opacity-20" />
-          )}
+      <div className="flex flex-col items-center justify-center space-y-4">
+        <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-400">
           {uploading ? (
-            <Loader2 className="w-10 h-10 animate-spin text-indigo-600" />
+            <Loader2 className="w-8 h-8 animate-spin text-indigo-400" />
           ) : (
-            <UploadCloud className="w-10 h-10 transition-transform duration-500" strokeWidth={1.5} />
+            <UploadCloud className="w-8 h-8 text-slate-400" strokeWidth={1.5} />
           )}
         </div>
         
         <div className="space-y-1">
-          <p className="text-lg font-semibold text-slate-900 tracking-tight">
-            {uploading ? 'Processing Document...' : 'Drop a PDF to verify'}
+          <p className="text-sm font-semibold text-slate-200">
+            {uploading ? 'Processing PDF Document…' : 'Upload Research PDF'}
           </p>
-          <p className="text-sm text-slate-500 font-medium">
-            {uploading ? 'Please wait while we prepare your file' : 'or click to browse from your computer'}
+          <p className="text-xs text-slate-400 font-normal">
+            {uploading 
+              ? 'Parsing vector text, building TF-IDF index, and preparing spans' 
+              : 'Drag & drop or click to choose file'}
           </p>
+        </div>
+
+        <div className="pt-1 flex items-center gap-1.5 text-[11px] font-mono text-slate-500">
+          <FileText className="w-3 h-3 text-slate-500" />
+          <span>PDF up to 50MB</span>
         </div>
       </div>
     </div>

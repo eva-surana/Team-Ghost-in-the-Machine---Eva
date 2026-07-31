@@ -13,32 +13,44 @@ export function useClaimStream() {
     try {
       const res = await fetch(`/api/documents/${documentId}/ask`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'text/event-stream, application/json',
+        },
         body: JSON.stringify({ question }),
       })
-      if (!res.ok || !res.body) throw new Error('Stream failed to start')
+      if (!res.ok) throw new Error('Request failed')
 
-      const reader = res.body.getReader()
-      const decoder = new TextDecoder()
-      let buffer = ''
+      const contentType = res.headers.get('content-type') || ''
 
-      while (true) {
-        const { value, done } = await reader.read()
-        if (done) break
+      if (contentType.includes('text/event-stream') && res.body) {
+        const reader = res.body.getReader()
+        const decoder = new TextDecoder()
+        let buffer = ''
 
-        buffer += decoder.decode(value, { stream: true })
-        const messages = buffer.split('\n\n')
-        buffer = messages.pop() ?? '' // keep incomplete chunk for next read
+        while (true) {
+          const { value, done } = await reader.read()
+          if (done) break
 
-        for (const raw of messages) {
-          if (!raw.trim()) continue
-          const eventLine = raw.split('\n').find((l) => l.startsWith('event:'))
-          const dataLine = raw.split('\n').find((l) => l.startsWith('data:'))
-          const eventType = eventLine?.replace('event:', '').trim()
-          const data = dataLine ? JSON.parse(dataLine.replace('data:', '').trim()) : null
+          buffer += decoder.decode(value, { stream: true })
+          const messages = buffer.split('\n\n')
+          buffer = messages.pop() ?? '' // keep incomplete chunk for next read
 
-          if (eventType === 'claim' && data) dispatch(claimReceived(data))
-          // eventType === 'status' can drive a progress indicator if you add one
+          for (const raw of messages) {
+            if (!raw.trim()) continue
+            const eventLine = raw.split('\n').find((l) => l.startsWith('event:'))
+            const dataLine = raw.split('\n').find((l) => l.startsWith('data:'))
+            const eventType = eventLine?.replace('event:', '').trim()
+            const data = dataLine ? JSON.parse(dataLine.replace('data:', '').trim()) : null
+
+            if (eventType === 'claim' && data) dispatch(claimReceived(data))
+          }
+        }
+      } else {
+        const data = await res.json()
+        const claims = data.answer_spans || []
+        for (const claim of claims) {
+          dispatch(claimReceived(claim))
         }
       }
       dispatch(streamDone())

@@ -168,8 +168,8 @@ async def get_fidelity(doc_id: str):
 
 # ── Q&A ───────────────────────────────────────────────────────────────────────
 
-@router.post("/documents/{doc_id}/ask", response_model=QAResponse, tags=["Q&A"])
-async def ask(doc_id: str, req: QARequest):
+@router.post("/documents/{doc_id}/ask", tags=["Q&A"])
+async def ask(doc_id: str, req: QARequest, accept: Optional[str] = Header(None)):
     _assert_completed(doc_id)
     if not req.question or not req.question.strip():
         raise HTTPException(status_code=400, detail="Question cannot be empty.")
@@ -177,6 +177,13 @@ async def ask(doc_id: str, req: QARequest):
         raise HTTPException(
             status_code=400,
             detail=f"Question exceeds maximum allowed length of {settings.MAX_QUESTION_CHARS} characters.",
+        )
+    if accept and "text/event-stream" in accept:
+        from fastapi.responses import StreamingResponse
+        from app.generation.grounded_generator import generate_grounded_qa_stream
+        return StreamingResponse(
+            generate_grounded_qa_stream(doc_id, req.question),
+            media_type="text/event-stream",
         )
     from app.generation.grounded_generator import generate_grounded_qa
     return await generate_grounded_qa(doc_id, req.question)

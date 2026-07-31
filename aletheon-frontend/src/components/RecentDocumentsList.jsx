@@ -2,7 +2,7 @@
 import { useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useRouter } from 'next/navigation'
-import { FileText, ChevronRight, Clock } from 'lucide-react'
+import { FileText, ChevronRight, Clock, ShieldCheck } from 'lucide-react'
 import { getRecentDocuments } from '../lib/api'
 import { recentDocumentsLoaded } from '../store/documentSlice'
 
@@ -20,38 +20,37 @@ export default function RecentDocumentsList() {
   if (documents.length === 0) return null
 
   return (
-    <div className="mt-12">
-      <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-6 px-2 flex items-center gap-2">
-        <Clock className="w-3 h-3" />
-        Recent documents
-      </h2>
-      <div className="bg-white/40 backdrop-blur-xl rounded-3xl border border-white/50 shadow-xl shadow-gray-200/20 overflow-hidden">
+    <div className="mt-8">
+      <div className="glass-panel rounded-2xl border border-slate-800/80 overflow-hidden shadow-2xl">
         {documents.map((doc, index) => (
           <div
             key={doc.documentId}
             onClick={() => router.push(`/document/${doc.documentId}`)}
             className={`
-              group relative flex items-center justify-between p-5 cursor-pointer transition-all duration-300
-              hover:bg-white/80 hover:shadow-lg hover:shadow-indigo-500/5 hover:-translate-y-px
-              ${index !== documents.length - 1 ? 'border-b border-gray-100/60' : ''}
+              group relative flex items-center justify-between p-4 sm:p-5 cursor-pointer transition-all duration-300
+              hover:bg-slate-800/60 hover:border-indigo-500/20
+              ${index !== documents.length - 1 ? 'border-b border-slate-800/60' : ''}
             `}
           >
-            <div className="flex items-center space-x-5">
-              <div className="relative p-3 bg-white rounded-2xl border border-gray-100 shadow-sm group-hover:scale-110 transition-transform duration-300">
-                <FileText className="w-5 h-5 text-indigo-500" />
+            <div className="flex items-center space-x-4">
+              <div className="relative p-3 bg-slate-900/80 rounded-xl border border-slate-700/60 text-indigo-400 group-hover:scale-105 group-hover:border-indigo-500/40 transition-transform duration-300">
+                <FileText className="w-5 h-5" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-gray-900 group-hover:text-indigo-700 transition-colors">{doc.name}</p>
+                <p className="text-sm font-semibold text-slate-100 group-hover:text-indigo-300 transition-colors">
+                  {doc.name}
+                </p>
                 <div className="flex items-center gap-2 mt-1">
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-gradient-to-r from-indigo-500 to-violet-500 text-white shadow-sm">
-                    {doc.fidelity}% Fidelity
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    <ShieldCheck className="w-3 h-3" />
+                    {doc.fidelity}% Verified
                   </span>
-                  <p className="text-[11px] text-gray-400">Last updated recently</p>
+                  <span className="text-[11px] text-slate-500">Document ID: {doc.documentId?.slice(0, 8)}</span>
                 </div>
               </div>
             </div>
-            <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 -translate-x-2 group-hover:translate-x-0">
-              <ChevronRight className="w-4 h-4 text-indigo-600" />
+            <div className="w-8 h-8 rounded-lg bg-slate-800/80 border border-slate-700/60 flex items-center justify-center text-slate-400 group-hover:text-indigo-300 group-hover:bg-indigo-500/20 transition-all duration-300">
+              <ChevronRight className="w-4 h-4" />
             </div>
           </div>
         ))}

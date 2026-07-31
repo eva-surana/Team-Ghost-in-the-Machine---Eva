@@ -99,3 +99,52 @@ def _composite_claim(
         retrieval_score=round(avg_retrieval, 4),
         entailment_score=0.0,            # placeholder
     )
+
+
+def extract_precise_answer_sentence(question: str, span_text: str) -> str:
+    """
+    Extract the pinpoint sentence(s) from a paragraph span_text that best match the question.
+    Preserves exact verbatim text of extracted sentences.
+    """
+    import re
+    if not span_text or not span_text.strip():
+        return span_text
+
+    # Split into sentences
+    sentences = [s.strip() for s in re.split(r"(?<=[.!?])\s+", span_text) if s.strip()]
+    if len(sentences) <= 1:
+        return span_text
+
+    q_words = set(re.findall(r"\b[a-z0-9]+\b", question.lower()))
+    _STOPWORDS = {"what", "which", "where", "when", "who", "whom", "whose", "why", "how",
+                  "is", "are", "was", "were", "be", "been", "being", "have", "has", "had",
+                  "do", "does", "did", "the", "a", "an", "and", "or", "but", "in", "on",
+                  "at", "to", "for", "with", "about", "against", "between", "into", "through",
+                  "during", "before", "after", "above", "below", "from", "up", "down", "of",
+                  "off", "over", "under", "again", "further", "then", "once", "this", "that"}
+    keywords = q_words - _STOPWORDS
+
+    if not keywords:
+        return sentences[0]
+
+    sentence_scores = []
+    for idx, sent in enumerate(sentences):
+        sent_words = set(re.findall(r"\b[a-z0-9]+\b", sent.lower()))
+        overlap = len(sent_words & keywords)
+        score = overlap / max(len(keywords), 1)
+        sentence_scores.append((score, idx, sent))
+
+    sentence_scores.sort(key=lambda x: x[0], reverse=True)
+
+    top_score = sentence_scores[0][0]
+    if top_score == 0:
+        return sentences[0]
+
+    # Pick top 1 or top 2 consecutive matching sentences
+    selected_indices = [sentence_scores[0][1]]
+    if len(sentence_scores) > 1 and sentence_scores[1][0] >= top_score * 0.75:
+        selected_indices.append(sentence_scores[1][1])
+
+    selected_indices.sort()
+    return " ".join(sentences[i] for i in selected_indices)
+

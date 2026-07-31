@@ -33,7 +33,8 @@ def test_recommendation_engine_similar_papers():
             text="We introduce BERT, a deep bidirectional transformer language representation model.",
         )
     ]
-    job_manager.store_spans(doc_id, spans)
+    from app.models.registry import ArtifactRegistry
+    ArtifactRegistry.get().load_all()
 
     recs = recommendation_engine.similar_papers(doc_id, top_k=3)
     assert len(recs) > 0

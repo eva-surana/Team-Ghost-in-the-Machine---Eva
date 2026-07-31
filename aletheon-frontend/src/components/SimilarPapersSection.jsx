@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { getSimilarPapers } from '../lib/api'
+import { BookOpen, Sparkles, Loader2 } from 'lucide-react'
 
 export default function SimilarPapersSection({ documentId }) {
   const [loading, setLoading] = useState(true)
@@ -36,33 +37,39 @@ export default function SimilarPapersSection({ documentId }) {
 
   if (loading) {
     return (
-      <div className="mt-6 pt-6 border-t border-gray-100">
-        <h3 className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-4 ml-1">Similar Papers in Corpus</h3>
-        <div className="animate-pulse space-y-3">
-          <div className="h-16 bg-gray-50 rounded-xl border border-gray-100"></div>
-          <div className="h-16 bg-gray-50 rounded-xl border border-gray-100"></div>
+      <div className="mt-4 pt-4 border-t border-slate-800/80">
+        <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+          <BookOpen className="w-3.5 h-3.5 text-indigo-400" />
+          Related Papers in Corpus
+        </h3>
+        <div className="flex items-center gap-2 text-xs text-slate-400 py-3">
+          <Loader2 className="w-4 h-4 animate-spin text-indigo-400" />
+          <span>Searching local corpus index…</span>
         </div>
       </div>
     )
   }
 
   if (error || !papers || papers.length === 0) {
-    return null // Optionally handle error or empty state silently if not found
+    return null
   }
 
   return (
-    <div className="mt-6 pt-6 border-t border-gray-100">
-      <h3 className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-4 ml-1">Similar Papers in Corpus</h3>
-      <div className="space-y-3">
+    <div className="mt-4 pt-4 border-t border-slate-800/80">
+      <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+        <BookOpen className="w-3.5 h-3.5 text-indigo-400" />
+        Related Papers in Corpus
+      </h3>
+      <div className="space-y-2.5">
         {papers.map((paper, i) => (
-          <div key={i} className="p-4 bg-white border border-gray-100 rounded-xl shadow-sm hover:border-indigo-100 hover:shadow-md transition-all">
-            <h4 className="text-sm font-medium text-gray-900 mb-2">{paper.title}</h4>
+          <div key={i} className="p-3.5 bg-slate-900/80 border border-slate-800 rounded-xl hover:border-indigo-500/30 transition-all">
+            <h4 className="text-xs font-bold text-slate-100 mb-1.5">{paper.title}</h4>
             <div className="flex items-center space-x-3">
-              <span className="text-[11px] font-medium text-emerald-600 bg-emerald-50 px-2 py-1 rounded border border-emerald-100">
-                {Math.round(paper.similarity_score * 100)}% Match
+              <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                {Math.round(paper.similarity_score * 100)}% Similarity
               </span>
-              <span className="text-[12px] text-gray-500 truncate flex-1">
-                Matched on: {paper.matched_on.join(', ')}
+              <span className="text-[11px] text-slate-400 truncate flex-1">
+                Matched on: {paper.matched_on?.join(', ') || 'Corpus indexing'}
               </span>
             </div>
           </div>

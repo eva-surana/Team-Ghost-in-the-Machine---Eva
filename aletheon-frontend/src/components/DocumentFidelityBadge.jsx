@@ -9,29 +9,28 @@ export default function DocumentFidelityBadge() {
   if (!fidelity) return null
 
   return (
-    <div className="relative inline-block text-right">
+    <div className="relative inline-block text-right font-mono">
       <button
         onClick={() => setExpanded((e) => !e)}
-        className="flex items-center space-x-2 bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full text-xs font-medium border border-emerald-100 shadow-sm hover:bg-emerald-100 transition-colors cursor-pointer"
+        className="flex items-center space-x-1.5 bg-slate-900 text-emerald-400 px-2.5 py-1 rounded text-xs font-medium border border-slate-800 hover:border-slate-700 transition-colors cursor-pointer"
       >
-        <span>{fidelity.verified}% source fidelity</span>
+        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+        <span>Fidelity: {fidelity.verified}%</span>
       </button>
 
       {expanded && (
-        <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-gray-100 rounded-lg shadow-sm p-3 z-20 text-left">
-          <div className="text-xs space-y-2">
-            <div className="flex justify-between">
-              <span className="text-emerald-600 font-medium">Verified</span>
-              <span className="text-gray-900">{fidelity.verified}%</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-amber-600 font-medium">Partial</span>
-              <span className="text-gray-900">{fidelity.partial}%</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-rose-600 font-medium">Unsupported</span>
-              <span className="text-gray-900">{fidelity.unsupported}%</span>
-            </div>
+        <div className="absolute right-0 top-full mt-1.5 w-44 bg-slate-900 border border-slate-800 rounded-lg shadow-xl p-3 z-30 text-left text-xs space-y-1.5 font-mono">
+          <div className="flex justify-between items-center text-slate-300">
+            <span className="text-emerald-400">Verified</span>
+            <span>{fidelity.verified}%</span>
+          </div>
+          <div className="flex justify-between items-center text-slate-300">
+            <span className="text-amber-400">Partial</span>
+            <span>{fidelity.partial}%</span>
+          </div>
+          <div className="flex justify-between items-center text-slate-300">
+            <span className="text-rose-400">Unsupported</span>
+            <span>{fidelity.unsupported}%</span>
           </div>
         </div>
       )}

@@ -23,6 +23,8 @@ def _setup_completed_doc(text: str = "Aletheon is an evidence-first research pla
     job_manager.store_spans(doc_id, [span])
     tfidf_service.fit_and_store(doc_id, [span])
     job_manager.update_status(doc_id, status="completed", pages_count=1, chunks_count=1)
+    from app.models.registry import ArtifactRegistry
+    ArtifactRegistry.get().load_all()
     return doc_id
 
 
@@ -117,6 +119,18 @@ def test_qa_returns_explicit_reason_when_unanswered():
     assert "answer_spans" in data
     assert len(data["answer_spans"]) == 0
     assert data["reason"] == "no_verified_claims_found"
+
+
+def test_qa_returns_sse_stream_when_requested():
+    doc_id = _setup_completed_doc("Aletheon is an evidence-first research platform with verified citations.")
+    r = client.post(
+        f"/documents/{doc_id}/ask",
+        json={"question": "What is Aletheon?"},
+        headers={"Accept": "text/event-stream"},
+    )
+    assert r.status_code == 200
+    assert "text/event-stream" in r.headers["content-type"]
+    assert "event: status" in r.text or "event: claim" in r.text
 
 
 def test_recommendations_similar_papers():

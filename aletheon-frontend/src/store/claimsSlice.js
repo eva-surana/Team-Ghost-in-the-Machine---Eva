@@ -22,9 +22,7 @@ const claimsSlice = createSlice({
     streamDone: (state) => {
       state.status = 'done'
       // Freeze the accumulated claims as an assistant message
-      if (state.items.length > 0) {
-        state.messages.push({ id: Date.now() + 1, type: 'assistant', claims: [...state.items] })
-      }
+      state.messages.push({ id: Date.now() + 1, type: 'assistant', claims: [...state.items] })
       state.items = []
     },
     streamErrored: (state) => {

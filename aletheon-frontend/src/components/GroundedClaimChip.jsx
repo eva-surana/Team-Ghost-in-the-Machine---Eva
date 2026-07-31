@@ -2,20 +2,30 @@
 import { useDispatch } from 'react-redux'
 import { setActiveSpan, pinSpan } from '../store/groundingSlice'
 
-const STATUS_STYLES = {
-  verified: { border: 'border-l-emerald-500', label: 'text-emerald-600', text: 'Verified' },
-  partially_supported: {
-    border: 'border-l-amber-500',
-    label: 'text-amber-600',
-    text: 'Partially supported',
+const STATUS_MAP = {
+  verified: {
+    border: 'border-l-emerald-500 bg-slate-950/80 border-slate-800 hover:border-slate-700',
+    tag: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
+    label: 'Verified',
   },
-  unsupported: { border: 'border-l-rose-500', label: 'text-rose-600', text: 'Unsupported' },
+  partially_supported: {
+    border: 'border-l-amber-500 bg-slate-950/80 border-slate-800 hover:border-slate-700',
+    tag: 'text-amber-400 bg-amber-500/10 border-amber-500/20',
+    label: 'Partial Support',
+  },
+  unsupported: {
+    border: 'border-l-rose-500 bg-slate-950/80 border-slate-800 hover:border-slate-700',
+    tag: 'text-rose-400 bg-rose-500/10 border-rose-500/20',
+    label: 'Unsupported',
+  },
 }
 
 export default function GroundedClaimChip({ claim }) {
   const dispatch = useDispatch()
-  const style = STATUS_STYLES[claim.verification_status] ?? STATUS_STYLES.unsupported
-  const primarySpanId = claim.cited_spans?.[0]?.source_id
+  const statusConfig = STATUS_MAP[claim.verification_status] ?? STATUS_MAP.unsupported
+  const primarySpan = claim.cited_spans?.[0]
+  const primarySpanId = primarySpan?.source_id
+  const confidencePct = claim.confidence ? Math.round(claim.confidence * 100) : null
 
   function handleHover() {
     if (primarySpanId) dispatch(setActiveSpan(primarySpanId))
@@ -34,11 +44,29 @@ export default function GroundedClaimChip({ claim }) {
       onMouseEnter={handleHover}
       onMouseLeave={handleLeave}
       onClick={handleClick}
-      className={`mb-2 p-3 bg-gray-50 border-l-[3px] rounded-r-xl cursor-default transition-colors duration-150 ease-in-out ${style.border} hover:bg-gray-100/70`}
+      className={`p-3 rounded-lg border border-l-2 cursor-pointer transition-all ${statusConfig.border}`}
     >
-      <p className="text-xs text-gray-700 leading-relaxed">{claim.text}</p>
-      <div className={`mt-2 text-[10px] font-semibold uppercase tracking-wider ${style.label}`}>
-        {style.text}
+      <p className="text-xs text-slate-200 leading-relaxed font-sans">
+        "{claim.text}"
+      </p>
+
+      <div className="mt-2.5 flex items-center justify-between border-t border-slate-800/60 pt-2 text-[10px] font-mono">
+        <div className="flex items-center gap-2">
+          <span className={`px-1.5 py-0.5 rounded border uppercase tracking-wider font-semibold ${statusConfig.tag}`}>
+            {statusConfig.label}
+          </span>
+          {primarySpan && (
+            <span className="text-slate-400">
+              p.{primarySpan.page} {primarySpan.section ? `· ${primarySpan.section}` : ''}
+            </span>
+          )}
+        </div>
+
+        {confidencePct !== null && (
+          <span className="text-slate-400">
+            {confidencePct}% conf
+          </span>
+        )}
       </div>
     </div>
   )

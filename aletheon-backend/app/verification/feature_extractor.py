@@ -50,7 +50,12 @@ def extract_features(
     if vectorizer is not None:
         try:
             vecs = vectorizer.transform([claim_lower, source_lower])
-            tfidf_cos = float(cosine_similarity(vecs[0], vecs[1])[0, 0])
+            cos = float(cosine_similarity(vecs[0], vecs[1])[0, 0])
+            import numpy as np
+            if np.isnan(cos) or cos <= 0.0:
+                tfidf_cos = _word_jaccard(claim_words, source_words)
+            else:
+                tfidf_cos = cos
         except Exception:
             tfidf_cos = _word_jaccard(claim_words, source_words)
     else:
